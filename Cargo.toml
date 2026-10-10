@@ -1,0 +1,9 @@
+[package]
+name = "ansi-parser"
+version = "0.1.0"
+edition = "2024"
+description = "An incremental ANSI and terminal escape sequence parser for Rust"
+license = "MIT"
+readme = "README.md"
+keywords = ["ansi", "terminal", "parser", "escape-sequences"]
+categories = ["parsing", "command-line-interface"]
