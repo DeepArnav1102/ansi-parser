@@ -1,3 +1,6 @@
+mod parser;
+pub use parser::Parser;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Event {
     Print(Vec<u8>),
