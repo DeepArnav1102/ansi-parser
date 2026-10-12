@@ -216,6 +216,11 @@ impl Parser {
                         }));
                     } else if byte == 0x07 {
                         if saw_escape {
+                            if payload.len() >= MAX_OSC_PAYLOAD {
+                                self.state = State::OscIgnore { saw_escape: false };
+                                continue;
+                            }
+
                             payload.push(0x1B);
                         }
 
@@ -225,6 +230,11 @@ impl Parser {
                         }));
                     } else if byte == 0x1B {
                         if saw_escape {
+                            if payload.len() >= MAX_OSC_PAYLOAD {
+                                self.state = State::OscIgnore { saw_escape: true };
+                                continue;
+                            }
+
                             payload.push(0x1B);
                         }
 
@@ -234,18 +244,23 @@ impl Parser {
                         };
                     } else {
                         if saw_escape {
+                            if payload.len() >= MAX_OSC_PAYLOAD {
+                                self.state = State::OscIgnore { saw_escape: false };
+                                continue;
+                            }
+
                             payload.push(0x1B);
                         }
 
-                        if payload.len() < MAX_OSC_PAYLOAD {
+                        if payload.len() >= MAX_OSC_PAYLOAD {
+                            self.state = State::OscIgnore { saw_escape: false };
+                        } else {
                             payload.push(byte);
 
                             self.state = State::OscString {
                                 payload,
                                 saw_escape: false,
                             };
-                        } else {
-                            self.state = State::OscIgnore { saw_escape: false };
                         }
                     }
                 }
