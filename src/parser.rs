@@ -2,6 +2,7 @@ use crate::{CsiSequence, EscapeSequence, Event};
 
 const MAX_CSI_PARAMS: usize = 256;
 const MAX_CSI_INTERMEDIATES: usize = 16;
+const MAX_OSC_PAYLOAD: usize = 4096;
 
 #[derive(Debug, Clone)]
 enum State {
@@ -18,6 +19,14 @@ enum State {
     },
 
     CsiIgnore,
+    OscString {
+        payload: Vec<u8>,
+        saw_escape: bool,
+    },
+
+    OscIgnore {
+        saw_escape: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +85,14 @@ impl Parser {
                             parameter_bytes: Vec::new(),
                             intermediates: Vec::new(),
                             saw_intermediate: false,
+                        };
+                    }
+
+                    b']' if intermediates.is_empty() => {
+                        flush_text(&mut text, &mut events);
+                        self.state = State::OscString {
+                            payload: Vec::new(),
+                            saw_escape: false,
                         };
                     }
 
@@ -187,6 +204,63 @@ impl Parser {
                         self.state = State::CsiIgnore;
                     }
                 },
+
+                State::OscString {
+                    mut payload,
+                    saw_escape,
+                } => {
+                    if saw_escape && byte == b'\\' {
+                        events.push(Event::Osc(crate::OscSequence {
+                            payload,
+                            terminator: crate::OscTerminator::St,
+                        }));
+                    } else if byte == 0x07 {
+                        if saw_escape {
+                            payload.push(0x1B);
+                        }
+
+                        events.push(Event::Osc(crate::OscSequence {
+                            payload,
+                            terminator: crate::OscTerminator::Bell,
+                        }));
+                    } else if byte == 0x1B {
+                        if saw_escape {
+                            payload.push(0x1B);
+                        }
+
+                        self.state = State::OscString {
+                            payload,
+                            saw_escape: true,
+                        };
+                    } else {
+                        if saw_escape {
+                            payload.push(0x1B);
+                        }
+
+                        if payload.len() < MAX_OSC_PAYLOAD {
+                            payload.push(byte);
+
+                            self.state = State::OscString {
+                                payload,
+                                saw_escape: false,
+                            };
+                        } else {
+                            self.state = State::OscIgnore { saw_escape: false };
+                        }
+                    }
+                }
+
+                State::OscIgnore { saw_escape } => {
+                    if saw_escape && byte == b'\\' {
+                        self.state = State::Ground;
+                    } else if byte == 0x07 {
+                        self.state = State::Ground;
+                    } else {
+                        self.state = State::OscIgnore {
+                            saw_escape: byte == 0x1B,
+                        };
+                    }
+                }
             }
         }
 

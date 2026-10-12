@@ -3,14 +3,7 @@ use ansi_parser::{Event, Parser};
 fn main() {
     let mut parser = Parser::new();
 
-    let chunks: &[&[u8]] = &[
-        b"Hello ",
-        b"\x1b",
-        b"[31",
-        b"m",
-        b"Red",
-        b"\x1b[0m",
-    ];
+    let chunks: &[&[u8]] = &[b"Hello ", b"\x1b", b"[31", b"m", b"Red", b"\x1b[0m"];
 
     for chunk in chunks {
         for event in parser.feed(chunk) {

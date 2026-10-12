@@ -1,4 +1,3 @@
-
 use ansi_parser::{Event, Parser};
 
 #[test]
@@ -7,10 +6,7 @@ fn parses_plain_text() {
 
     let events = parser.feed(b"Hello");
 
-    assert_eq!(
-        events,
-        vec![Event::Print(b"Hello".to_vec())]
-    );
+    assert_eq!(events, vec![Event::Print(b"Hello".to_vec())]);
 }
 
 #[test]
@@ -97,4 +93,3 @@ fn handles_line_feed() {
         ]
     );
 }
-
