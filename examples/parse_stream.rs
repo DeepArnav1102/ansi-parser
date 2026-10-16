@@ -27,6 +27,9 @@ fn main() {
                 Event::Osc(sequence) => {
                     println!("OSC: {:?}", sequence);
                 }
+                Event::Dcs(sequence) => {
+                    println!("DCS: {:?}", sequence);
+                }
             }
         }
     }
