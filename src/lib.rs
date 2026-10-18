@@ -1,9 +1,15 @@
 pub mod csi;
+pub mod osc;
 mod parser;
+pub mod stream;
+pub mod style;
 pub mod util;
 
 pub use csi::{Color, CsiAction, EraseDisplayMode, EraseLineMode, SgrAction, StandardColor};
+pub use osc::{ClipboardTarget, OscAction};
 pub use parser::Parser;
+pub use stream::{AnsiReader, AnsiSpanReader, ParserIter};
+pub use style::{Style, StyleTracker, StyledSpan, to_html, to_styled_spans};
 pub use util::{strip_ansi, strip_ansi_to_string};
 
 #[derive(PartialEq, Eq, Debug, Clone)]

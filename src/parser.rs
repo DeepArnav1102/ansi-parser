@@ -514,6 +514,11 @@ impl Parser {
         self.feed_each(input, |event| events.push(event));
         events
     }
+
+    /// Return an incremental pull-based iterator over [`Event`] items in `input`.
+    pub fn iter<'a>(&'a mut self, input: &'a [u8]) -> crate::stream::ParserIter<'a> {
+        crate::stream::ParserIter::new(self, input)
+    }
 }
 
 impl Default for Parser {
