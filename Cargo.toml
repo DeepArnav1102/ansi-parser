@@ -7,3 +7,11 @@ license = "MIT"
 readme = "README.md"
 keywords = ["ansi", "terminal", "parser", "escape-sequences"]
 categories = ["parsing", "command-line-interface"]
+
+# The fuzz harness is its own workspace (see fuzz/Cargo.toml); it is built
+# separately with `cargo fuzz` and must not be pulled in here.
+[workspace]
+exclude = ["fuzz"]
+
+[dev-dependencies]
+proptest = "1.12.0"

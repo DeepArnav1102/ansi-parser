@@ -1,0 +1,55 @@
+[package]
+name = "ansi-parser-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.ansi-parser]
+path = ".."
+
+# Keep fuzz targets in sync with `tests/properties.rs`: each target exercises
+# one public entry point with arbitrary bytes plus the same invariants the
+# property suite asserts.
+[[bin]]
+name = "parse_events"
+path = "fuzz_targets/parse_events.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "feed_chunks"
+path = "fuzz_targets/feed_chunks.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "strip_ansi"
+path = "fuzz_targets/strip_ansi.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "screen_feed"
+path = "fuzz_targets/screen_feed.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "decode_input"
+path = "fuzz_targets/decode_input.rs"
+test = false
+doc = false
+bench = false
+
+# Prevent this crate from being adopted by the parent workspace.
+[workspace]
