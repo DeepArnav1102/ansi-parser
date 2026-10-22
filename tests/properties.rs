@@ -11,8 +11,8 @@
 //! - `strip_ansi` output never contains escape bytes and is idempotent.
 
 use ansi_parser::{
-    decode_input_sequence, strip_ansi, Cell, CsiSequence, Cursor, Event, OscTerminator, Parser,
-    Screen, ScreenDiff,
+    Cell, CsiSequence, Cursor, Event, OscTerminator, Parser, Screen, ScreenDiff,
+    decode_input_sequence, strip_ansi,
 };
 use proptest::collection::vec;
 use proptest::prelude::*;

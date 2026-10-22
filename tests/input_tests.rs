@@ -1,6 +1,6 @@
 use ansi_parser::{
-    decode_input_sequence, encode_key, encode_mouse, encode_paste, InputEvent, KeyCode, Modifiers,
-    MouseAction, MouseButton, MouseEvent, MouseProtocol,
+    InputEvent, KeyCode, Modifiers, MouseAction, MouseButton, MouseEvent, MouseProtocol,
+    decode_input_sequence, encode_key, encode_mouse, encode_paste,
 };
 
 #[test]

@@ -107,11 +107,7 @@ impl Modifiers {
         if self.ctrl {
             code += 4;
         }
-        if code > 1 {
-            Some(code)
-        } else {
-            None
-        }
+        if code > 1 { Some(code) } else { None }
     }
 
     /// Parse modifier flags from an xterm modifier parameter (2..=8).
@@ -176,10 +172,7 @@ pub struct MouseEvent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputEvent {
     /// Keystroke event.
-    Key {
-        key: KeyCode,
-        modifiers: Modifiers,
-    },
+    Key { key: KeyCode, modifiers: Modifiers },
     /// Mouse event.
     Mouse(MouseEvent),
     /// Bracketed paste payload.
@@ -536,13 +529,7 @@ pub fn decode_input_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)> {
                     };
 
                     if let Some(k) = key {
-                        return Some((
-                            InputEvent::Key {
-                                key: k,
-                                modifiers,
-                            },
-                            pos + 1,
-                        ));
+                        return Some((InputEvent::Key { key: k, modifiers }, pos + 1));
                     }
                 }
             }

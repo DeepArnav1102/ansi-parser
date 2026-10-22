@@ -22,17 +22,17 @@ pub mod style;
 pub mod util;
 
 pub use csi::{Color, CsiAction, EraseDisplayMode, EraseLineMode, SgrAction, StandardColor};
-pub use diff::{generate_ansi_diff, to_snapshot, to_svg, CellPatch, ScreenDiff};
+pub use diff::{CellPatch, ScreenDiff, generate_ansi_diff, to_snapshot, to_svg};
 pub use input::{
-    decode_input_sequence, encode_key, encode_mouse, encode_paste, InputEvent, KeyCode, Modifiers,
-    MouseAction, MouseButton, MouseEvent, MouseProtocol,
+    InputEvent, KeyCode, Modifiers, MouseAction, MouseButton, MouseEvent, MouseProtocol,
+    decode_input_sequence, encode_key, encode_mouse, encode_paste,
 };
 pub use osc::{ClipboardTarget, OscAction};
 pub use parser::Parser;
 pub use screen::{Cell, Cursor, Screen, TerminalGrid};
 #[cfg(feature = "std")]
 pub use stream::{AnsiReader, AnsiSpanReader, ParserIter};
-pub use style::{to_html, to_styled_spans, Style, StyleTracker, StyledSpan};
+pub use style::{Style, StyleTracker, StyledSpan, to_html, to_styled_spans};
 pub use util::{strip_ansi, strip_ansi_to_string};
 
 #[derive(PartialEq, Eq, Debug, Clone)]

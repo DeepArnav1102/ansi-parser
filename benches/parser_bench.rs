@@ -3,9 +3,7 @@
 //! Measures parser throughput, ANSI stripping, screen virtualization,
 //! and delta diff generation across various workloads.
 
-use ansi_parser::{
-    generate_ansi_diff, strip_ansi, Event, Parser, Screen,
-};
+use ansi_parser::{Event, Parser, Screen, generate_ansi_diff, strip_ansi};
 use std::time::Instant;
 
 fn bench<F>(name: &str, bytes_processed: usize, mut f: F)
@@ -69,16 +67,20 @@ fn main() {
     }
     let ansi_bytes = ansi_text.as_bytes();
 
-    bench("feed_each (high-density ANSI, 48 KB)", ansi_bytes.len(), || {
-        let mut parser = Parser::new();
-        let mut count = 0;
-        parser.feed_each(ansi_bytes, |event| {
-            if let Event::Csi(_) = event {
-                count += 1;
-            }
-        });
-        std::hint::black_box(count);
-    });
+    bench(
+        "feed_each (high-density ANSI, 48 KB)",
+        ansi_bytes.len(),
+        || {
+            let mut parser = Parser::new();
+            let mut count = 0;
+            parser.feed_each(ansi_bytes, |event| {
+                if let Event::Csi(_) = event {
+                    count += 1;
+                }
+            });
+            std::hint::black_box(count);
+        },
+    );
 
     // 3. strip_ansi benchmark
     bench("strip_ansi (mixed ANSI, 48 KB)", ansi_bytes.len(), || {
@@ -87,11 +89,15 @@ fn main() {
     });
 
     // 4. Screen virtualization feed benchmark
-    bench("screen_feed (80x24 terminal stream)", ansi_bytes.len(), || {
-        let mut screen = Screen::new(24, 80);
-        screen.feed(ansi_bytes);
-        std::hint::black_box(screen);
-    });
+    bench(
+        "screen_feed (80x24 terminal stream)",
+        ansi_bytes.len(),
+        || {
+            let mut screen = Screen::new(24, 80);
+            screen.feed(ansi_bytes);
+            std::hint::black_box(screen);
+        },
+    );
 
     // 5. Screen diff & minimal ANSI patch benchmark
     let mut screen_a = Screen::new(24, 80);
