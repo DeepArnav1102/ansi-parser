@@ -1,4 +1,4 @@
-use ansi_parser::{DcsSequence, Event, OscTerminator, Parser};
+use nc_parser::{DcsSequence, Event, OscTerminator, Parser};
 
 #[test]
 fn parses_dcs_terminated_by_st() {

@@ -1,4 +1,4 @@
-use ansi_parser::{
+use nc_parser::{
     InputEvent, KeyCode, Modifiers, MouseAction, MouseButton, MouseEvent, MouseProtocol,
     decode_input_sequence, encode_key, encode_mouse, encode_paste,
 };

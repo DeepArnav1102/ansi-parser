@@ -1,4 +1,4 @@
-use ansi_parser::{
+use nc_parser::{
     Color, CsiAction, EraseDisplayMode, EraseLineMode, Event, Parser, SgrAction, StandardColor,
 };
 

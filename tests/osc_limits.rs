@@ -1,4 +1,4 @@
-use ansi_parser::{Event, Parser};
+use nc_parser::{Event, Parser};
 
 #[test]
 fn oversized_osc_is_ignored_and_parser_recovers() {

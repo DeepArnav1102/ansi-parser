@@ -1,4 +1,4 @@
-use ansi_parser::{Event, OscSequence, OscTerminator, Parser};
+use nc_parser::{Event, OscSequence, OscTerminator, Parser};
 
 #[test]
 fn parses_osc_terminated_by_bell() {

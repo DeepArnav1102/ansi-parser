@@ -1,4 +1,4 @@
-use ansi_parser::{ClipboardTarget, Event, OscAction, Parser};
+use nc_parser::{ClipboardTarget, Event, OscAction, Parser};
 
 #[test]
 fn decodes_window_titles() {

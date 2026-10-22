@@ -1,4 +1,4 @@
-use ansi_parser::{Event, Parser};
+use nc_parser::{Event, Parser};
 
 #[test]
 fn parses_plain_text() {
@@ -27,7 +27,7 @@ fn parses_csi_across_multiple_chunks() {
 
     assert_eq!(
         events,
-        vec![Event::Csi(ansi_parser::CsiSequence {
+        vec![Event::Csi(nc_parser::CsiSequence {
             parameter_bytes: b"31".to_vec(),
             intermediates: vec![],
             final_byte: b'm',
@@ -45,7 +45,7 @@ fn parses_text_before_csi() {
         events,
         vec![
             Event::Print(b"Hello".to_vec()),
-            Event::Csi(ansi_parser::CsiSequence {
+            Event::Csi(nc_parser::CsiSequence {
                 parameter_bytes: b"31".to_vec(),
                 intermediates: vec![],
                 final_byte: b'm',
@@ -63,13 +63,13 @@ fn parses_multiple_sequences() {
     assert_eq!(
         events,
         vec![
-            Event::Csi(ansi_parser::CsiSequence {
+            Event::Csi(nc_parser::CsiSequence {
                 parameter_bytes: b"31".to_vec(),
                 intermediates: vec![],
                 final_byte: b'm',
             }),
             Event::Print(b"Red".to_vec()),
-            Event::Csi(ansi_parser::CsiSequence {
+            Event::Csi(nc_parser::CsiSequence {
                 parameter_bytes: b"0".to_vec(),
                 intermediates: vec![],
                 final_byte: b'm',

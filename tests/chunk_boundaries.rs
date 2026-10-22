@@ -1,4 +1,4 @@
-use ansi_parser::{Event, Parser};
+use nc_parser::{Event, Parser};
 
 fn normalize(events: Vec<Event>) -> Vec<Event> {
     let mut normalized: Vec<Event> = Vec::new();

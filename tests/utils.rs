@@ -1,4 +1,4 @@
-use ansi_parser::{CsiSequence, Event, Parser, strip_ansi, strip_ansi_to_string};
+use nc_parser::{CsiSequence, Event, Parser, strip_ansi, strip_ansi_to_string};
 
 #[test]
 fn test_strip_ansi_bytes() {

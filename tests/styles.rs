@@ -1,4 +1,4 @@
-use ansi_parser::{Color, StandardColor, Style, StyleTracker, to_html, to_styled_spans};
+use nc_parser::{Color, StandardColor, Style, StyleTracker, to_html, to_styled_spans};
 
 #[test]
 fn tracks_styles_across_sgr_codes() {

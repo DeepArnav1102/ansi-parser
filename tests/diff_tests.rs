@@ -1,4 +1,4 @@
-use ansi_parser::{Screen, ScreenDiff, generate_ansi_diff, to_snapshot, to_svg};
+use nc_parser::{Screen, ScreenDiff, generate_ansi_diff, to_snapshot, to_svg};
 
 #[test]
 fn diffs_identical_screens() {

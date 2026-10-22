@@ -1,4 +1,4 @@
-use ansi_parser::{Event, Parser};
+use nc_parser::{Event, Parser};
 
 #[test]
 fn incomplete_csi_does_not_panic() {

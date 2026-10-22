@@ -1,4 +1,4 @@
-use ansi_parser::{Color, Screen, StandardColor};
+use nc_parser::{Color, Screen, StandardColor};
 
 #[test]
 fn writes_text_and_moves_cursor() {

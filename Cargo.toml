@@ -1,12 +1,17 @@
 [package]
-name = "ansi-parser"
+name = "nc-parser"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.85"
 description = "An incremental ANSI and terminal escape sequence parser for Rust"
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/DeepArnav1102/nc-parser"
+homepage = "https://github.com/DeepArnav1102/nc-parser"
+documentation = "https://docs.rs/nc-parser"
 keywords = ["ansi", "terminal", "parser", "escape-sequences"]
 categories = ["parsing", "command-line-interface"]
+include = ["src/**", "examples/**", "benches/**", "tests/**", "README.md", "LICENSE", "CHANGELOG.md", "Cargo.toml"]
 
 [features]
 default = ["std"]

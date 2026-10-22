@@ -1,5 +1,5 @@
 [package]
-name = "ansi-parser-fuzz"
+name = "nc-parser-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2024"
@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 
-[dependencies.ansi-parser]
+[dependencies.nc-parser]
 path = ".."
 
 # Keep fuzz targets in sync with `tests/properties.rs`: each target exercises

@@ -1,4 +1,4 @@
-use ansi_parser::{AnsiReader, AnsiSpanReader, Color, Event, Parser, StandardColor};
+use nc_parser::{AnsiReader, AnsiSpanReader, Color, Event, Parser, StandardColor};
 use std::io::Cursor;
 
 #[test]

@@ -10,7 +10,7 @@
 //! - Recovery: valid sequences still parse after arbitrary garbage.
 //! - `strip_ansi` output never contains escape bytes and is idempotent.
 
-use ansi_parser::{
+use nc_parser::{
     Cell, CsiSequence, Cursor, Event, OscTerminator, Parser, Screen, ScreenDiff,
     decode_input_sequence, strip_ansi,
 };

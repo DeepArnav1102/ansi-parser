@@ -1,6 +1,6 @@
 #![no_main]
 
-use ansi_parser::Event;
+use nc_parser::Event;
 use libfuzzer_sys::fuzz_target;
 
 // Feed arbitrary bytes in deterministic pseudo-random chunk sizes.
@@ -17,10 +17,10 @@ fuzz_target!(|data: &[u8]| {
     let chunk_size = (data[data.len() - 1] as usize % 257) + 1;
     let body = &data[..data.len() - 1];
 
-    let mut one_shot = ansi_parser::Parser::new();
+    let mut one_shot = nc_parser::Parser::new();
     let expected = one_shot.feed(data);
 
-    let mut chunked = ansi_parser::Parser::new();
+    let mut chunked = nc_parser::Parser::new();
     let mut actual = Vec::new();
     for chunk in body.chunks(chunk_size) {
         actual.extend(chunked.feed(chunk));

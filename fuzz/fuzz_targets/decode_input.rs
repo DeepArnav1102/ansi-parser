@@ -8,7 +8,7 @@ fuzz_target!(|data: &[u8]| {
     let mut offset = 0usize;
 
     while offset < data.len() {
-        match ansi_parser::decode_input_sequence(&data[offset..]) {
+        match nc_parser::decode_input_sequence(&data[offset..]) {
             Some((_event, consumed)) => {
                 assert!(consumed > 0, "decoder consumed zero bytes");
                 offset += consumed;

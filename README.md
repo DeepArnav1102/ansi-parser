@@ -1,159 +1,223 @@
-# ansi-parser
+# nc-parser
 
-[![CI](https://github.com/arnav-deep/ansi-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/arnav-deep/ansi-parser/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/ansi-parser.svg)](https://crates.io/crates/ansi-parser)
+[![CI](https://github.com/DeepArnav1102/nc-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/DeepArnav1102/nc-parser/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/nc-parser.svg)](https://crates.io/crates/nc-parser)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![no_std compatible](https://img.shields.io/badge/no__std-compatible-success.svg)](https://docs.rs/ansi-parser)
+[![no_std compatible](https://img.shields.io/badge/no__std-compatible-success.svg)](https://docs.rs/nc-parser)
 
-A blazing fast, zero-dependency, streaming ANSI escape sequence parser and virtual terminal toolkit in pure Rust.
+`nc-parser` is an incremental ANSI/ECMA-48 parser and lightweight headless
+terminal toolkit. It is intended for terminal-output inspection, log viewers,
+snapshot tests, ANSI-to-HTML conversion, and bounded virtual-screen rendering.
 
-Designed for high-throughput terminal multiplexers, TUIs, headless CLI testing, terminal recording/playback, and embedded (`#![no_std]`) environments.
+It is not a complete terminal emulator. See [Scope and limitations](#scope-and-limitations)
+before using it as a compatibility layer for an interactive terminal.
 
----
+## Why use it?
 
-## ✨ Features at a Glance
+- Incremental parsing: ESC, CSI, OSC, and DCS sequences can cross arbitrary
+  PTY, pipe, or network read boundaries.
+- Structured events: callers receive raw bytes and lossless sequence fields,
+  then may opt into typed CSI and OSC actions.
+- Bounded control strings: CSI parameters, OSC payloads, and DCS payloads have
+  fixed parser limits to avoid unbounded sequence accumulation.
+- Useful layers above parsing: style spans, escaped HTML, screen snapshots,
+  SVG rendering, ANSI screen diffs, and terminal-input encoding/decoding.
+- Minimal production dependency surface: the library uses Rust `core` and
+  `alloc`; `std` is only needed for the streaming I/O adapters.
 
-- **Zero Runtime Dependencies**: Strict commitment to 100% zero third-party dependencies (strictly Rust `core` and `alloc`).
-- **`#![no_std]` & Embedded Ready**: First-class support for bare-metal targets (e.g., `thumbv7em`, WASM) via feature flags (`default = ["std"]`).
-- **Streaming & Chunk-Invariant**: Correctly parses control sequences split arbitrarily across TCP packets, Unix PTY chunks, or pipe boundaries.
-- **Rich CSI Actions**: Full ECMA-48 CSI decoding (SGR colors 16/256/TrueColor 24-bit RGB with colon and semicolon formats, cursor jumps, line/screen erasures, DEC private modes).
-- **OSC Dispatch & Zero-Dep Base64**: Parses OSC window titles, OSC 7 working directories, OSC 8 hyperlinks, OSC 10/11 color queries, and OSC 52 clipboard sequences (with built-in base64 decoding).
-- **ECMA-48 DCS Engine**: Full Device Control String parsing (`ESC P`) with DoS payload limits (32 KiB cap) and safe opt-in 8-bit C1 control support.
-- **Visual Style Tracking & HTML Export**: Tracks active text styling bitmasks and colors across stream boundaries, coalescing adjacent text spans and rendering clean CSS/HTML.
-- **Virtual Terminal Screen Grid**: Complete 2D headless virtual screen buffer (`Screen`, `TerminalGrid`) supporting scrolling, cursor coordinates, and DECSET 1049 alternate screen buffer switching.
-- **Screen Diffing & Bandwidth-Optimal Patching**: Calculates frame-by-frame screen deltas (`ScreenDiff`) and generates bandwidth-minimized ANSI escape patches. Exports standalone vector SVG screenshots and text snapshots.
-- **Bi-directional Input Protocol**: Encodes and decodes keyboard keys, modifiers, SGR 1006 mouse events, focus events, and bracketed paste mode.
-- **Battle-Tested & Fuzzed**: Fuzzed against Google's `libFuzzer` and verified with a 15-property `proptest` invariant suite across millions of executions.
-
----
-
-## 📦 Installation
-
-Add `ansi-parser` to your `Cargo.toml`:
+## Installation
 
 ```toml
 [dependencies]
-ansi-parser = "0.1.0"
+nc-parser = "0.1"
 ```
 
-For embedded or `#![no_std]` environments without `std`:
+For an `alloc`-based `no_std` target, disable default features:
 
 ```toml
 [dependencies]
-ansi-parser = { version = "0.1.0", default-features = false, features = ["alloc"] }
+nc-parser = { version = "0.1", default-features = false, features = ["alloc"] }
 ```
 
----
+The default `std` feature enables `AnsiReader`, `AnsiSpanReader`, and
+`Parser::iter`.
 
-## 🚀 Quick Start Examples
+## Core parser
 
-### 1. Streaming Parser with Zero Allocations (`feed_each`)
+`Parser` retains its state between `feed` calls. Sequence data is emitted only
+when the sequence terminates, while printable text and C0 controls are emitted
+as events.
 
 ```rust
-use ansi_parser::{Parser, Event};
+use nc_parser::{Event, Parser};
 
 let mut parser = Parser::new();
-let input = b"Hello, \x1b[31;1mBold Red\x1b[0m World!\n";
 
-parser.feed_each(input, |event| {
-    match event {
-        Event::Print(text) => print!("{}", String::from_utf8_lossy(&text)),
-        Event::Csi(csi) => println!("CSI Action: {:?}", csi.action()),
-        Event::Control(b) => println!("Control byte: 0x{:02X}", b),
-        _ => {}
+let first_events = parser.feed(b"hello \x1b[31");
+assert!(matches!(first_events[0], Event::Print(_)));
+let events = parser.feed(b"mred\x1b[0m");
+
+assert!(matches!(events[0], Event::Csi(_)));
+assert!(matches!(events[1], Event::Print(_)));
+```
+
+Use `feed_each` when events should be consumed immediately instead of collected:
+
+```rust
+use nc_parser::{Event, Parser};
+
+let mut parser = Parser::new();
+parser.feed_each(b"\x1b[1;31merror\x1b[0m", |event| {
+    if let Event::Csi(sequence) = event {
+        println!("CSI action: {:?}", sequence.action());
     }
 });
 ```
 
-### 2. Stripping ANSI Sequences
+`Event::Print` contains bytes, not a `String`. This preserves non-UTF-8 terminal
+output. Convert with `String::from_utf8_lossy` only when lossy text is acceptable.
+
+## Typed actions
+
+The raw event model is lossless. Convenience methods interpret common sequences:
 
 ```rust
-use ansi_parser::{strip_ansi, strip_ansi_to_string};
+use nc_parser::{CsiAction, Event, Parser, SgrAction};
 
-let clean_str = strip_ansi_to_string("\x1b[32mSuccess:\x1b[0m Job finished!");
-assert_eq!(clean_str, "Success: Job finished!");
+let mut parser = Parser::new();
+let events = parser.feed(b"\x1b[1;38;5;196m");
+
+let Event::Csi(csi) = &events[0] else { panic!("expected CSI") };
+assert!(matches!(csi.action(), CsiAction::Sgr(actions)
+    if actions.contains(&SgrAction::Bold)));
 ```
 
-### 3. Headless Virtual Terminal Screen & Grid
+`OscSequence::action()` recognizes titles, OSC 7 working directories, OSC 8
+hyperlinks, OSC 10/11 colors, and OSC 52 clipboard payloads. OSC actions are
+untrusted data. Applications must enforce their own URL allowlist and user
+consent policy before opening links or changing a clipboard.
+
+## Headless screen and snapshots
+
+`Screen` applies supported events to a fixed-size terminal grid. Use `feed` for
+a complete byte slice, or call `process_event` with events from a persistent
+`Parser` when terminal output arrives in chunks. Then inspect the active grid
+or export a text/SVG snapshot.
 
 ```rust
-use ansi_parser::Screen;
+use nc_parser::{Screen, to_snapshot};
 
 let mut screen = Screen::new(24, 80);
-screen.feed(b"\x1b[2J\x1b[1;1HHeader Line\x1b[3;5H[ Status: OK ]");
+screen.feed(b"\x1b[2J\x1b[1;1HStatus: \x1b[32mOK\x1b[0m");
 
-// Inspect cell at row 2 (0-indexed), col 4
-let cell = screen.grid().get(2, 4).unwrap();
-assert_eq!(cell.ch, '[');
-
-// Export screen state as bordered text or standalone SVG
-let snapshot = ansi_parser::to_snapshot(&screen);
-let svg = ansi_parser::to_svg(&screen);
+assert_eq!(screen.line_to_string(0), "Status: OK");
+assert_eq!(screen.active_grid().get(0, 8).unwrap().ch, 'O');
+println!("{}", to_snapshot(&screen));
 ```
 
-### 4. Screen Diffing & Minimal ANSI Patch Generation
+Use `ScreenDiff::compute` and `generate_ansi_diff` to construct a patch between
+two same-sized screen states:
 
 ```rust
-use ansi_parser::{Screen, generate_ansi_diff};
+use nc_parser::{Screen, generate_ansi_diff};
 
-let mut frame1 = Screen::new(24, 80);
-frame1.feed(b"Initial frame text");
+let mut before = Screen::new(2, 20);
+before.feed(b"starting");
+let mut after = before.clone();
+after.feed(b"\x1b[1;1Hready");
 
-let mut frame2 = frame1.clone();
-frame2.feed(b"\x1b[1;1HUpdated");
-
-// Generates the minimal byte sequence needed to transition from frame1 to frame2
-let patch_bytes = generate_ansi_diff(&frame1, &frame2);
-
-let mut replayed = frame1.clone();
-replayed.feed(&patch_bytes);
-assert_eq!(replayed.to_text(), frame2.to_text());
+let patch = generate_ansi_diff(&before, &after);
+before.feed(&patch);
+assert_eq!(before.to_text(), after.to_text());
 ```
 
-### 5. Bi-directional Terminal Input Protocol
+## Style spans and HTML
 
 ```rust
-use ansi_parser::{encode_key, decode_input_sequence, KeyCode, Modifiers, InputEvent};
+use nc_parser::{to_html, to_styled_spans};
 
-// Encode Shift+Up Arrow key
-let bytes = encode_key(KeyCode::Up, Modifiers::SHIFT);
-assert_eq!(bytes, b"\x1b[1;2A");
+let input = b"\x1b[1;31mAlert:\x1b[0m <check>";
+let spans = to_styled_spans(input);
+assert_eq!(spans[0].to_string_lossy(), "Alert:");
 
-// Decode received stdin bytes
-let (event, consumed) = decode_input_sequence(&bytes).unwrap();
-assert_eq!(consumed, 6);
-assert_eq!(event, InputEvent::Key { key: KeyCode::Up, modifiers: Modifiers::SHIFT });
+let html = to_html(input);
+assert!(html.contains("font-weight:bold"));
+assert!(html.contains("&lt;check&gt;"));
 ```
 
----
+The HTML helper escapes text content. It does not execute OSC actions or create
+hyperlinks from OSC 8 sequences.
 
-## ⚡ Performance
+## Supported protocol coverage
 
-Benchmarks measured on x86_64:
-
-| Benchmark | Payload Size | Throughput |
+| Family | Parser behavior | Typed/high-level support |
 |---|---|---|
-| `feed_each` (Plain text) | 67 KB | **~60 MB/s** |
-| `feed_each` (High-density ANSI SGR) | 48 KB | **~15 MB/s** |
-| `strip_ansi` (Mixed ANSI) | 48 KB | **~25 MB/s** |
-| `screen_diff_compute` | 80x24 (1920 cells) | **~90 µs / frame** |
-| `generate_ansi_diff` | 80x24 (1920 cells) | **~85 µs / patch** |
+| Printable text and C0 | Emits byte-preserving print and control events | Style tracking and screen handling for CR, LF, backspace, and tab |
+| ESC | Emits `EscapeSequence` with intermediates and final byte | Screen handles DECSC, DECRC, and RIS |
+| CSI | Emits parameter bytes, intermediates, and final byte | SGR; cursor movement/positioning; erase display/line; scroll; save/restore cursor; selected DEC private modes |
+| OSC | Emits payload plus Bell/ST terminator | 0/2 titles, 7 CWD, 8 hyperlinks, 10/11 colors, 52 clipboard data |
+| DCS | Emits header, payload, and terminator | Structured only; interpretation is caller-defined |
+| 8-bit C1 | Disabled by default to avoid confusing UTF-8 continuation bytes | Enable with `Parser::with_8bit_c1(true)` |
+| Terminal input | Encodes and decodes common input sequences | Keys, modified cursor keys, bracketed paste, focus, SGR mouse, and normal mouse |
 
-Run benchmarks yourself:
-```bash
-cargo bench --bench parser_bench
+## Resource limits and malformed input
+
+The parser applies these bounds before storing sequence bytes:
+
+| Data | Limit | Behavior at limit |
+|---|---:|---|
+| CSI parameter bytes | 256 bytes | Ignore through the terminating final byte |
+| ESC/CSI intermediates | 16 bytes | Ignore malformed sequence |
+| OSC payload | 4 KiB | Ignore through Bell or ST |
+| DCS payload | 32 KiB | Ignore through Bell or ST |
+
+Malformed and incomplete sequences do not produce partial sequence events. The
+parser remains usable after a terminating byte or a cancellation control.
+
+## Streaming I/O
+
+With the default `std` feature, `AnsiReader<R: Read>` turns an I/O source into
+incremental `Event` values. `AnsiSpanReader` applies `StyleTracker` while
+reading. They retain parser state across read boundaries.
+
+```rust,no_run
+use nc_parser::{AnsiReader, Event};
+use std::fs::File;
+
+let mut reader = AnsiReader::new(File::open("build.log")?);
+while let Some(event) = reader.next_event()? {
+    if let Event::Print(bytes) = event {
+        print!("{}", String::from_utf8_lossy(&bytes));
+    }
+}
+# Ok::<(), std::io::Error>(())
 ```
 
----
+## Scope and limitations
 
-## 🛡 Security & Verification
+This crate deliberately does not currently provide full terminal-emulator
+semantics. In particular, it has no scrollback buffer, resize protocol,
+grapheme-cluster or East Asian-width handling, scrolling regions, character
+insertion/deletion, terminal graphics protocols, or PTY management. Use a full
+terminal-emulator core if those capabilities are required.
 
-- **DoS-Resistant Buffers**: Hard ceilings on parameter and payload allocations (256 CSI params, 4 KB OSC payload, 32 KB DCS payload). Oversized sequences enter safe ignore states with zero memory allocation.
-- **libFuzzer Targets**: 5 continuous fuzz targets under `fuzz/` covering chunk fragmentation, screen grids, input decoding, and ANSI stripping.
-- **Proptest Invariant Suite**: 15 property-based tests verifying chunk invariance, round-trip serialization, and bounded execution over arbitrary byte sequences.
+The public API is pre-1.0. Patch releases target compatible bug fixes; minor
+releases may contain breaking API changes until downstream use and protocol
+coverage justify a 1.0 stability promise.
 
----
+## Development and verification
 
-## 📜 License
+```bash
+cargo test --all-features
+cargo check --no-default-features --features alloc
+cargo clippy --all-targets --all-features -- -D warnings
+cargo fmt --all -- --check
+```
+
+The repository also contains libFuzzer targets under `fuzz/` and property tests
+covering chunk boundaries, bounded parser states, serialization, screen safety,
+and input decoding.
+
+## License
 
 Licensed under the [MIT License](LICENSE).

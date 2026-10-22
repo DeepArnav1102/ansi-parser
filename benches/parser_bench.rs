@@ -1,9 +1,9 @@
-//! Zero-dependency micro-benchmarks for ansi-parser.
+//! Zero-dependency micro-benchmarks for nc-parser.
 //!
 //! Measures parser throughput, ANSI stripping, screen virtualization,
 //! and delta diff generation across various workloads.
 
-use ansi_parser::{Event, Parser, Screen, generate_ansi_diff, strip_ansi};
+use nc_parser::{Event, Parser, Screen, generate_ansi_diff, strip_ansi};
 use std::time::Instant;
 
 fn bench<F>(name: &str, bytes_processed: usize, mut f: F)
@@ -36,7 +36,7 @@ where
 }
 
 fn main() {
-    println!("Running ansi-parser micro-benchmarks...\n");
+    println!("Running nc-parser micro-benchmarks...\n");
 
     // 1. Plain text benchmark (67 KB)
     let plain_text = "The quick brown fox jumps over the lazy dog.\n".repeat(1500);
@@ -106,7 +106,7 @@ fn main() {
     screen_b.feed(b"\x1b[2;1HUpdated Frame Line\x1b[3;5H[OK]\x1b[10;1HNew bottom text");
 
     bench("screen_diff_compute (80x24)", 24 * 80, || {
-        let diff = ansi_parser::ScreenDiff::compute(&screen_a, &screen_b);
+        let diff = nc_parser::ScreenDiff::compute(&screen_a, &screen_b);
         std::hint::black_box(diff);
     });
 

@@ -1,4 +1,9 @@
 /target/
+
+# Keep the public README; local audits, reports, and planning notes do not
+# belong in release commits.
+*.md
+!README.md
 ANSI_ESCAPE_SEQUENCES_AND_PARSER_GUIDE.md
 decisions.md
 flow.md
