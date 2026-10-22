@@ -10,6 +10,9 @@
 //! - [`encode_paste`]: Wrap text in bracketed paste mode (`\x1b[200~` ... `\x1b[201~`).
 //! - [`decode_input_sequence`]: Parse raw bytes received from terminal standard input into [`InputEvent`].
 
+use alloc::string::String;
+use alloc::vec::Vec;
+
 /// Key code representing keyboard keys.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum KeyCode {
@@ -189,13 +192,14 @@ pub enum InputEvent {
 
 /// Encode a keyboard key and modifier combination into standard terminal escape bytes.
 pub fn encode_key(key: KeyCode, modifiers: Modifiers) -> Vec<u8> {
-    if modifiers.ctrl && !modifiers.alt && !modifiers.shift {
-        if let KeyCode::Char(c) = key {
-            if c.is_ascii_alphabetic() {
-                let code = (c.to_ascii_uppercase() as u8) - b'A' + 1;
-                return vec![code];
-            }
-        }
+    if modifiers.ctrl
+        && !modifiers.alt
+        && !modifiers.shift
+        && let KeyCode::Char(c) = key
+        && c.is_ascii_alphabetic()
+    {
+        let code = (c.to_ascii_uppercase() as u8) - b'A' + 1;
+        return vec![code];
     }
 
     let mod_param = modifiers.to_xterm_param();
@@ -324,7 +328,7 @@ pub fn encode_mouse(event: MouseEvent, protocol: MouseProtocol) -> Vec<u8> {
             format!("\x1b[<{code};{};{}{suffix}", event.col, event.row).into_bytes()
         }
         MouseProtocol::Normal => {
-            let b = (code.min(223) + 32) as u8;
+            let b = code.min(223) + 32;
             let x = ((event.col.min(223)) as u8) + 32;
             let y = ((event.row.min(223)) as u8) + 32;
             vec![0x1B, b'[', b'M', b, x, y]
@@ -371,68 +375,64 @@ pub fn decode_input_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)> {
         // Bracketed paste: \x1b[200~ ... \x1b[201~
         if bytes.starts_with(b"\x1b[200~") {
             const END: &[u8] = b"\x1b[201~";
-            if let Some(pos) = bytes.windows(END.len()).position(|w| w == END) {
-                let payload = &bytes[6..pos];
-                let text = String::from_utf8_lossy(payload).into_owned();
-                return Some((InputEvent::Paste(text), pos + END.len()));
-            } else {
-                return None; // Incomplete paste sequence
-            }
+            let pos = bytes.windows(END.len()).position(|w| w == END)?;
+            let payload = &bytes[6..pos];
+            let text = String::from_utf8_lossy(payload).into_owned();
+            return Some((InputEvent::Paste(text), pos + END.len()));
         }
 
         // SGR Mouse: \x1b[< {code} ; {col} ; {row} (M|m)
-        if bytes.starts_with(b"\x1b[<") {
-            if let Some(end_idx) = bytes[3..]
+        if bytes.starts_with(b"\x1b[<")
+            && let Some(end_idx) = bytes[3..]
                 .iter()
                 .position(|&b| b == b'M' || b == b'm')
                 .map(|i| i + 3)
-            {
-                let is_release = bytes[end_idx] == b'm';
-                let slice = &bytes[3..end_idx];
-                if let Ok(s) = std::str::from_utf8(slice) {
-                    let parts: Vec<&str> = s.split(';').collect();
-                    if parts.len() == 3 {
-                        if let (Ok(code), Ok(col), Ok(row)) = (
-                            parts[0].parse::<u8>(),
-                            parts[1].parse::<usize>(),
-                            parts[2].parse::<usize>(),
-                        ) {
-                            let shift = (code & 4) != 0;
-                            let alt = (code & 8) != 0;
-                            let ctrl = (code & 16) != 0;
-                            let is_drag = (code & 32) != 0;
+        {
+            let is_release = bytes[end_idx] == b'm';
+            let slice = &bytes[3..end_idx];
+            if let Ok(s) = core::str::from_utf8(slice) {
+                let parts: Vec<&str> = s.split(';').collect();
+                if parts.len() == 3
+                    && let (Ok(code), Ok(col), Ok(row)) = (
+                        parts[0].parse::<u8>(),
+                        parts[1].parse::<usize>(),
+                        parts[2].parse::<usize>(),
+                    )
+                {
+                    let shift = (code & 4) != 0;
+                    let alt = (code & 8) != 0;
+                    let ctrl = (code & 16) != 0;
+                    let is_drag = (code & 32) != 0;
 
-                            let base_code = code & !0b0011_1100;
-                            let button = match base_code {
-                                0 => MouseButton::Left,
-                                1 => MouseButton::Middle,
-                                2 => MouseButton::Right,
-                                3 => MouseButton::None,
-                                64 => MouseButton::WheelUp,
-                                65 => MouseButton::WheelDown,
-                                _ => MouseButton::None,
-                            };
+                    let base_code = code & !0b0011_1100;
+                    let button = match base_code {
+                        0 => MouseButton::Left,
+                        1 => MouseButton::Middle,
+                        2 => MouseButton::Right,
+                        3 => MouseButton::None,
+                        64 => MouseButton::WheelUp,
+                        65 => MouseButton::WheelDown,
+                        _ => MouseButton::None,
+                    };
 
-                            let action = if is_release {
-                                MouseAction::Release
-                            } else if is_drag {
-                                MouseAction::Drag
-                            } else {
-                                MouseAction::Press
-                            };
+                    let action = if is_release {
+                        MouseAction::Release
+                    } else if is_drag {
+                        MouseAction::Drag
+                    } else {
+                        MouseAction::Press
+                    };
 
-                            return Some((
-                                InputEvent::Mouse(MouseEvent {
-                                    col,
-                                    row,
-                                    button,
-                                    action,
-                                    modifiers: Modifiers { shift, alt, ctrl },
-                                }),
-                                end_idx + 1,
-                            ));
-                        }
-                    }
+                    return Some((
+                        InputEvent::Mouse(MouseEvent {
+                            col,
+                            row,
+                            button,
+                            action,
+                            modifiers: Modifiers { shift, alt, ctrl },
+                        }),
+                        end_idx + 1,
+                    ));
                 }
             }
         }
@@ -496,52 +496,53 @@ pub fn decode_input_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)> {
         }
 
         // Tilde keys: \x1b[{num}~ or \x1b[{num};{m}~
-        if bytes.len() >= 4 && bytes[1] == b'[' {
-            if let Some(pos) = bytes[2..].iter().position(|&b| b == b'~').map(|p| p + 2) {
-                let slice = &bytes[2..pos];
-                if let Ok(s) = std::str::from_utf8(slice) {
-                    let mut parts = s.split(';');
-                    if let Some(first) = parts.next() {
-                        if let Ok(num) = first.parse::<u8>() {
-                            let modifiers = if let Some(m_str) = parts.next() {
-                                m_str
-                                    .parse::<u8>()
-                                    .map(Modifiers::from_xterm_param)
-                                    .unwrap_or(Modifiers::NONE)
-                            } else {
-                                Modifiers::NONE
-                            };
+        if bytes.len() >= 4
+            && bytes[1] == b'['
+            && let Some(pos) = bytes[2..].iter().position(|&b| b == b'~').map(|p| p + 2)
+        {
+            let slice = &bytes[2..pos];
+            if let Ok(s) = core::str::from_utf8(slice) {
+                let mut parts = s.split(';');
+                if let Some(first) = parts.next()
+                    && let Ok(num) = first.parse::<u8>()
+                {
+                    let modifiers = if let Some(m_str) = parts.next() {
+                        m_str
+                            .parse::<u8>()
+                            .map(Modifiers::from_xterm_param)
+                            .unwrap_or(Modifiers::NONE)
+                    } else {
+                        Modifiers::NONE
+                    };
 
-                            let key = match num {
-                                2 => Some(KeyCode::Insert),
-                                3 => Some(KeyCode::Delete),
-                                5 => Some(KeyCode::PageUp),
-                                6 => Some(KeyCode::PageDown),
-                                11 => Some(KeyCode::F(1)),
-                                12 => Some(KeyCode::F(2)),
-                                13 => Some(KeyCode::F(3)),
-                                14 => Some(KeyCode::F(4)),
-                                15 => Some(KeyCode::F(5)),
-                                17 => Some(KeyCode::F(6)),
-                                18 => Some(KeyCode::F(7)),
-                                19 => Some(KeyCode::F(8)),
-                                20 => Some(KeyCode::F(9)),
-                                21 => Some(KeyCode::F(10)),
-                                23 => Some(KeyCode::F(11)),
-                                24 => Some(KeyCode::F(12)),
-                                _ => None,
-                            };
+                    let key = match num {
+                        2 => Some(KeyCode::Insert),
+                        3 => Some(KeyCode::Delete),
+                        5 => Some(KeyCode::PageUp),
+                        6 => Some(KeyCode::PageDown),
+                        11 => Some(KeyCode::F(1)),
+                        12 => Some(KeyCode::F(2)),
+                        13 => Some(KeyCode::F(3)),
+                        14 => Some(KeyCode::F(4)),
+                        15 => Some(KeyCode::F(5)),
+                        17 => Some(KeyCode::F(6)),
+                        18 => Some(KeyCode::F(7)),
+                        19 => Some(KeyCode::F(8)),
+                        20 => Some(KeyCode::F(9)),
+                        21 => Some(KeyCode::F(10)),
+                        23 => Some(KeyCode::F(11)),
+                        24 => Some(KeyCode::F(12)),
+                        _ => None,
+                    };
 
-                            if let Some(k) = key {
-                                return Some((
-                                    InputEvent::Key {
-                                        key: k,
-                                        modifiers,
-                                    },
-                                    pos + 1,
-                                ));
-                            }
-                        }
+                    if let Some(k) = key {
+                        return Some((
+                            InputEvent::Key {
+                                key: k,
+                                modifiers,
+                            },
+                            pos + 1,
+                        ));
                     }
                 }
             }
@@ -626,7 +627,7 @@ pub fn decode_input_sequence(bytes: &[u8]) -> Option<(InputEvent, usize)> {
         }
         _ => {
             // Parse UTF-8 character
-            let s = std::str::from_utf8(bytes).ok()?;
+            let s = core::str::from_utf8(bytes).ok()?;
             let ch = s.chars().next()?;
             let len = ch.len_utf8();
             Some((

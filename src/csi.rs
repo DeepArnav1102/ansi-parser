@@ -1,4 +1,5 @@
 use crate::CsiSequence;
+use alloc::vec::Vec;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum StandardColor {

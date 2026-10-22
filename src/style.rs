@@ -1,5 +1,7 @@
 use crate::csi::{Color, SgrAction, StandardColor};
 use crate::{CsiAction, Event, Parser};
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 /// Active text rendition styling state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -226,11 +228,11 @@ impl StyleTracker {
         parser.feed_each(input, |event| {
             if let Some(span) = self.process_event(&event) {
                 // Merge adjacent spans with identical styles
-                if let Some(last) = spans.last_mut() {
-                    if last.style == span.style {
-                        last.text.extend(span.text);
-                        return;
-                    }
+                if let Some(last) = spans.last_mut()
+                    && last.style == span.style
+                {
+                    last.text.extend(span.text);
+                    return;
                 }
                 spans.push(span);
             }

@@ -1,9 +1,22 @@
+#![no_std]
+
+#[cfg(feature = "alloc")]
+#[macro_use]
+extern crate alloc;
+
+#[cfg(feature = "std")]
+extern crate std;
+
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
+
 pub mod csi;
 pub mod diff;
 pub mod input;
 pub mod osc;
 mod parser;
 pub mod screen;
+#[cfg(feature = "std")]
 pub mod stream;
 pub mod style;
 pub mod util;
@@ -17,6 +30,7 @@ pub use input::{
 pub use osc::{ClipboardTarget, OscAction};
 pub use parser::Parser;
 pub use screen::{Cell, Cursor, Screen, TerminalGrid};
+#[cfg(feature = "std")]
 pub use stream::{AnsiReader, AnsiSpanReader, ParserIter};
 pub use style::{to_html, to_styled_spans, Style, StyleTracker, StyledSpan};
 pub use util::{strip_ansi, strip_ansi_to_string};

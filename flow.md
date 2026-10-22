@@ -98,6 +98,13 @@ flowchart TD
         RawBytes --> StripAnsi["strip_ansi / strip_ansi_to_string"]
         StripAnsi --> FeedEach
     end
+
+    subgraph VerificationLayer ["11. Verification & Testing Matrix"]
+        PropTest["Proptest Invariant Suite (tests/properties.rs)"]
+        FuzzHarness["5 libFuzzer Targets (fuzz/)"]
+        MicroBench["Zero-Dep Micro-Benchmarks (benches/parser_bench.rs)"]
+        CiWorkflow["GitHub Actions CI Matrix (.github/workflows/ci.yml)"]
+    end
 ```
 
 ---
@@ -410,6 +417,67 @@ Previous Screen (from) + Target Screen (to)
     5. Emit final cursor position & visibility
             │
     Bandwidth-Minimized Byte Patch
+```
+
+---
+
+### L. `#![no_std]` + `alloc` Core Compilation & Feature Gating (`Cargo.toml`, `src/lib.rs`)
+
+```
+               Cargo Feature Selection
+                          │
+         ┌────────────────┴────────────────┐
+         ▼                                 ▼
+   default = ["std"]             --no-default-features --features alloc
+         │                                 │
+   Enables `std`                     Enables `#![no_std]` + `alloc`
+   Includes `src/stream.rs`          Omit `src/stream.rs` (std::io::Read)
+   Full std::io streaming            Pure core + alloc structures only
+         │                                 │
+         ▼                                 ▼
+   Desktop / CLI / Servers           Bare Metal / Embedded (thumbv7em) / WASM
+```
+
+---
+
+### M. Public API Documentation & Verified Examples Flow (`src/*`, `README.md`)
+
+```
+   Source Code Doc-Comments (/// ```rust)
+                    │
+   RUSTDOCFLAGS="-D warnings" cargo doc
+                    │
+       ┌────────────┴────────────┐
+       ▼                         ▼
+Compile Check Doc-Tests    Static HTML Generation
+       │                         │
+All Examples Validated     Clean, Warning-Free Documentation
+```
+
+---
+
+### N. Benchmarking & CI Matrix Execution Flow (`benches/`, `.github/workflows/ci.yml`)
+
+```
+                    GitHub Actions Trigger (push / PR)
+                                   │
+      ┌────────────────────────────┼────────────────────────────┐
+      ▼                            ▼                            ▼
+Multi-OS Matrix              no_std Validation            Quality Gates
+(Linux, macOS, Windows)     (thumbv7em target)      (Clippy -D warnings & fmt)
+      │                            │                            │
+cargo test --all-features   cargo check --no-default   cargo doc -D warnings
+      │                            │                            │
+      └────────────────────────────┼────────────────────────────┘
+                                   │
+                                   ▼
+             Local Micro-Benchmark Execution (`cargo bench`)
+                                   │
+                     ┌─────────────┴─────────────┐
+                     ▼                           ▼
+            Throughput (MB/s):            Latency (µs):
+            - feed_each (~60 MB/s)        - screen_diff (~90 µs)
+            - strip_ansi (~25 MB/s)       - generate_ansi_diff (~85 µs)
 ```
 
 ---

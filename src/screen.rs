@@ -13,6 +13,8 @@
 use crate::csi::{CsiAction, EraseDisplayMode, EraseLineMode};
 use crate::style::Style;
 use crate::{Event, Parser};
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// A single character cell in the terminal grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -119,9 +121,7 @@ impl TerminalGrid {
     /// Clear all cells in the grid to blank spaces with the given style.
     pub fn clear_all(&mut self, style: Style) {
         let blank = Cell::new(' ', style);
-        for cell in &mut self.cells {
-            *cell = blank;
-        }
+        self.cells.fill(blank);
     }
 
     /// Clear a portion of a line according to [`EraseLineMode`].

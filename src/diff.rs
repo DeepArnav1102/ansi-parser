@@ -14,6 +14,8 @@
 
 use crate::screen::{Cell, Cursor, Screen};
 use crate::style::Style;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 
 /// A single cell modification at grid coordinates `(row, col)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

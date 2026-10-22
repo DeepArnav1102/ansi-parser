@@ -1,4 +1,5 @@
 use crate::{CsiSequence, DcsSequence, EscapeSequence, Event, OscSequence, OscTerminator};
+use alloc::vec::Vec;
 
 const MAX_CSI_PARAMS: usize = 256;
 const MAX_CSI_INTERMEDIATES: usize = 16;
@@ -88,7 +89,7 @@ impl Parser {
         let mut text = Vec::new();
 
         for &byte in input {
-            let state = std::mem::replace(&mut self.state, State::Ground);
+            let state = core::mem::replace(&mut self.state, State::Ground);
 
             match state {
                 State::Ground => {
@@ -348,9 +349,7 @@ impl Parser {
                 }
 
                 State::OscIgnore { saw_escape } => {
-                    if saw_escape && byte == b'\\' {
-                        self.state = State::Ground;
-                    } else if byte == 0x07 {
+                    if (saw_escape && byte == b'\\') || byte == 0x07 {
                         self.state = State::Ground;
                     } else {
                         self.state = State::OscIgnore {
@@ -493,9 +492,7 @@ impl Parser {
                 }
 
                 State::DcsIgnore { saw_escape } => {
-                    if saw_escape && byte == b'\\' {
-                        self.state = State::Ground;
-                    } else if byte == 0x07 {
+                    if (saw_escape && byte == b'\\') || byte == 0x07 {
                         self.state = State::Ground;
                     } else {
                         self.state = State::DcsIgnore {
@@ -516,6 +513,7 @@ impl Parser {
     }
 
     /// Return an incremental pull-based iterator over [`Event`] items in `input`.
+    #[cfg(feature = "std")]
     pub fn iter<'a>(&'a mut self, input: &'a [u8]) -> crate::stream::ParserIter<'a> {
         crate::stream::ParserIter::new(self, input)
     }
@@ -532,6 +530,6 @@ where
     F: FnMut(Event),
 {
     if !text.is_empty() {
-        callback(Event::Print(std::mem::take(text)));
+        callback(Event::Print(core::mem::take(text)));
     }
 }

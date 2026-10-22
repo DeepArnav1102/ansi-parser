@@ -1,4 +1,6 @@
 use crate::OscSequence;
+use alloc::string::String;
+use alloc::vec::Vec;
 
 /// Target clipboard selection for OSC 52.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -103,7 +105,7 @@ impl OscSequence {
         let arg_bytes = &payload[delim_pos + 1..];
 
         // Parse command integer
-        let cmd_str = match std::str::from_utf8(cmd_bytes) {
+        let cmd_str = match core::str::from_utf8(cmd_bytes) {
             Ok(s) => s.trim(),
             Err(_) => return OscAction::Malformed,
         };

@@ -1,5 +1,7 @@
 use crate::{CsiSequence, DcsSequence, EscapeSequence, Event, OscSequence, OscTerminator, Parser};
-use std::fmt;
+use alloc::string::String;
+use alloc::vec::Vec;
+use core::fmt;
 
 pub fn strip_ansi(input: &[u8]) -> Vec<u8> {
     let mut parser = Parser::new();

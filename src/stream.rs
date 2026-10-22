@@ -1,6 +1,6 @@
 use crate::style::{StyleTracker, StyledSpan};
 use crate::{Event, Parser};
-use std::collections::VecDeque;
+use alloc::collections::VecDeque;
 use std::io::{self, Read};
 
 pub struct AnsiReader<R> {
